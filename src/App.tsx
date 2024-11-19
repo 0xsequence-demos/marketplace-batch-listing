@@ -40,7 +40,7 @@ function App() {
             quantity: parseInt(row.quantity, 10),
             expiry: Date.now() + 60 * 60 * 24 * 30,
             currency: currencyAddress,
-            pricePerToken: ethers.utils.parseUnits(String(row.price), 18),
+            pricePerToken: ethers.parseUnits(String(row.price), 18),
           }
         ));
           console.log(formattedRequests)
@@ -51,7 +51,7 @@ function App() {
   };
 
     const approveMarketplaceContract = async () => {
-        const erc1155Interface = new ethers.utils.Interface([
+        const erc1155Interface = new ethers.Interface([
             "function setApprovalForAll(address _operator, bool _approved) returns ()",
         ]);
 
@@ -79,7 +79,7 @@ function App() {
     }
 
     const getProvider = () => {
-        return new ethers.providers.JsonRpcProvider(`https://nodes.sequence.app/${chain}/${process.env.REACT_APP_PROJECT_ACCESS_KEY}`);
+        return new ethers.JsonRpcProvider(`https://nodes.sequence.app/${chain}/${process.env.REACT_APP_PROJECT_ACCESS_KEY}`);
     }
 
   const clickCreateRequest = async () => {
@@ -88,8 +88,8 @@ function App() {
         return;
     }
 
-    const sequenceMarketInterface = new ethers.utils.Interface([
-        "function createRequestBatch(tuple(bool isListing, bool isERC1155, address tokenContract, uint256 tokenId, uint256 quantity, uint96 expiry, address currency, uint256 pricePerToken)[]) external nonReentrant returns (uint256 requestId)"
+    const sequenceMarketInterface = new ethers.Interface([
+        "function createRequestBatch(tuple(bool isListing, bool isERC1155, address tokenContract, uint256 tokenId, uint256 quantity, uint96 expiry, address currency, uint256 pricePerToken)[]) returns (uint256 requestId)"
     ]);
 
       const signer = await getSigner();
@@ -116,15 +116,7 @@ function App() {
 
         try {
             const res = await signer.sendTransaction(txn);
-            console.log(res);
-
-            // Get transaction hash
-            const receipt = await getProvider().getTransactionReceipt(res.hash);
-
-            // Get gas
-            const totalCostInWei = receipt.gasUsed;
-            console.log(`Tx Hash: ${res.hash}`);
-            console.log(`Total cost: ${totalCostInWei}`);
+            await getProvider().getTransactionReceipt(res.hash);
         } catch (error) {
             console.error(`Error processing transaction: ${error}`);
         }
@@ -141,7 +133,7 @@ function App() {
       {isLoggedIn ? (
         <div className='container' style={{display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center'}}>
           <br/>
-          <input type="file" accept=".csv" onChange={handleFileUpload} style={{backgroundColor: 'var(--colors-button-glass)', padding: 10, borderRadius: 50}}/>
+          <input type="file" accept=".csv" onChange={handleFileUpload} style={{backgroundColor: 'var(--seq-colors-button-glass)', padding: 10, borderRadius: 50}}/>
           <br/>
           <br/>
           <Button label="Approve Marketplace" onClick={() => approveMarketplaceContract()} />
