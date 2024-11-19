@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
-import logo from './logo.svg';
 import './App.css';
-import { TextInput, Button } from '@0xsequence/design-system';
+import React, { useState } from 'react';
+import { Button } from '@0xsequence/design-system';
 import { ethers } from 'ethers'
 import { sequence } from '0xsequence';
 // @ts-ignore
 import Papa from 'papaparse';
 
-// Initialize the provider and sequence
-const provider = new ethers.providers.JsonRpcProvider(`https://nodes.sequence.app/sepolia/${process.env.REACT_APP_PROJECT_ACCESS_KEY}`);
-
+const chain = 'sepolia';
 const marketplaceContractAddress = '0xB537a160472183f2150d42EB1c3DD6684A55f74c';
+const collectionAddress = '0xabea5f754f6119853b5c252bcd25d5a313d14b64';
+const currencyAddress = '0x25f69ff8bf4fe6b94724df84a6049de28bd46b65';
 
-sequence.initWallet(process.env.REACT_APP_PROJECT_ACCESS_KEY!, { defaultNetwork: 11155111 });
+sequence.initWallet(process.env.REACT_APP_PROJECT_ACCESS_KEY!, { defaultNetwork: chain });
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -34,13 +33,13 @@ function App() {
         complete: (results: any) => {
           const formattedRequests = results.data.map((row: any) => (
             {
-            isListing: row.isListing === 'TRUE',
-            isERC1155: row.isERC1155 === 'TRUE',
-            tokenContract: row.collectionAddress,
+            isListing: true,
+            isERC1155: true,
+            tokenContract: collectionAddress,
             tokenId: parseInt(row.tokenId, 10),
             quantity: parseInt(row.quantity, 10),
-            expiry: Date.now() + 60*60*parseInt(row.expiry, 10),
-            currency: row.currency,
+            expiry: Date.now() + 60 * 60 * 24 * 30,
+            currency: currencyAddress,
             pricePerToken: ethers.utils.parseUnits(String(row.price), 18),
           }
         ));
@@ -62,18 +61,25 @@ function App() {
         );
 
         const txn = {
-            to: marketplaceContractAddress,
+            to: collectionAddress,
             data: dataApprove
         };
 
-        const signer = await getSigner();
-        const res = await signer.sendTransaction(txn);
-        console.log(res);
+        try {
+            const signer = await getSigner();
+            await signer.sendTransaction(txn);
+        } catch (e) {
+            console.log(e);
+        }
     }
 
     const getSigner = async() => {
         const wallet = sequence.getWallet();
-        return wallet.getSigner('sepolia');
+        return wallet.getSigner(chain);
+    }
+
+    const getProvider = () => {
+        return new ethers.providers.JsonRpcProvider(`https://nodes.sequence.app/${chain}/${process.env.REACT_APP_PROJECT_ACCESS_KEY}`);
     }
 
   const clickCreateRequest = async () => {
@@ -86,8 +92,7 @@ function App() {
         "function createRequestBatch(tuple(bool isListing, bool isERC1155, address tokenContract, uint256 tokenId, uint256 quantity, uint96 expiry, address currency, uint256 pricePerToken)[]) external nonReentrant returns (uint256 requestId)"
     ]);
 
-    const wallet = sequence.getWallet();
-    const signer = wallet.getSigner('sepolia');
+      const signer = await getSigner();
     
     // Function to split requests into chunks of 20
     const chunkSize = 20;
@@ -114,7 +119,7 @@ function App() {
             console.log(res);
 
             // Get transaction hash
-            const receipt = await provider.getTransactionReceipt(res.hash);
+            const receipt = await getProvider().getTransactionReceipt(res.hash);
 
             // Get gas
             const totalCostInWei = receipt.gasUsed;
@@ -131,21 +136,22 @@ function App() {
     <div className="App">
       <br/>
       <br/>
-      <h1>sequence market protocol <br/>batch wallet requests</h1>
+      <h1>Sequence Marketplace Batch Requests</h1>
       <br/>
       {isLoggedIn ? (
-        <div className='container'>
+        <div className='container' style={{display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center'}}>
           <br/>
-          <input type="file" accept=".csv" onChange={handleFileUpload} />
+          <input type="file" accept=".csv" onChange={handleFileUpload} style={{backgroundColor: 'var(--colors-button-glass)', padding: 10, borderRadius: 50}}/>
           <br/>
           <br/>
-          <Button label="create request batch" onClick={() => clickCreateRequest()} />
+          <Button label="Approve Marketplace" onClick={() => approveMarketplaceContract()} />
+          <Button label="Create Requests" onClick={() => clickCreateRequest()} />
         </div>
       ) : (
         <>
           <br/>
           <br/>
-          <Button label='connect' onClick={() => connect()} />
+          <Button label='Connect' onClick={() => connect()} />
         </>
       )}
       <br/>
